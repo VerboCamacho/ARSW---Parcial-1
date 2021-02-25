@@ -14,6 +14,8 @@ import java.util.UUID;
         ArrayList<Result> listOfResults = new ArrayList<Result>();
 
         public CoronaService() {
+            Result testResult=new Result(UUID.randomUUID(),"prueba","prueba","male","prueba@gmail.com","01/01/1999",ResultType.FALSE_POSITIVE,"test",true,01);
+            listOfResults.add(testResult);
 
         }
 
