@@ -18,10 +18,11 @@ import java.util.stream.Stream;
  */
 public class CovidAnalyzerTool {
 
-    private ResultAnalyzer resultAnalyzer;
-    private TestReader testReader;
+    private static ResultAnalyzer resultAnalyzer;
+    private static TestReader testReader;
     private int amountOfFilesTotal;
-    private AtomicInteger amountOfFilesProcessed;
+    private static AtomicInteger amountOfFilesProcessed;
+    private static ArrayList<AnalyzerThread> analyzerThreads;
 
     public CovidAnalyzerTool() {
         resultAnalyzer = new ResultAnalyzer();
@@ -42,7 +43,7 @@ public class CovidAnalyzerTool {
         }
     }
 
-    private List<File> getResultFileList() {
+    private static List<File> getResultFileList() {
         List<File> csvFiles = new ArrayList<>();
         try (Stream<Path> csvFilePaths = Files.walk(Paths.get("src/main/resources/")).filter(path -> path.getFileName().toString().endsWith(".csv"))) {
             csvFiles = csvFilePaths.map(Path::toFile).collect(Collectors.toList());
@@ -58,12 +59,45 @@ public class CovidAnalyzerTool {
     }
 
     /**
+     *  divisorThreads() metodo para hacer la division de archivos para cada thread
+     */
+    public static void divisorThreads(int numHilos) throws InterruptedException {
+        amountOfFilesProcessed.set(0);
+        List<File> transactionFiles = getResultFileList();
+        analyzerThreads=new ArrayList<AnalyzerThread>();
+        int threads=numHilos;
+        int resi=transactionFiles.size()/threads;
+        int hilos= 0;
+        int min=0;
+        for (int i=1;i<transactionFiles.size()+1;i++){
+            if(min==0){
+                min=i;
+            }
+            if(i%resi==0&&hilos<threads-1){
+                hilos+=1;
+                AnalyzerThread re=new AnalyzerThread(amountOfFilesProcessed,testReader,resultAnalyzer,transactionFiles,min,i);
+                re.start();
+                analyzerThreads.add(re);
+                min=0;
+            }
+            if(hilos==threads-1&&i== transactionFiles.size()){
+                AnalyzerThread re=new AnalyzerThread(amountOfFilesProcessed,testReader,resultAnalyzer,transactionFiles,min,i);
+                re.start();
+                analyzerThreads.add(re);
+                min=0;
+            }
+
+        }
+    }
+
+    /**
      * A main() so we can easily run these routing rules in our IDE
      */
     public static void main(String... args) throws Exception {
         CovidAnalyzerTool covidAnalyzerTool = new CovidAnalyzerTool();
-        Thread processingThread = new Thread(() -> covidAnalyzerTool.processResultData());
-        processingThread.start();
+        covidAnalyzerTool.divisorThreads(5);
+//        Thread processingThread = new Thread(() -> covidAnalyzerTool.processResultData());
+//        processingThread.start();
         while (true) {
             Scanner scanner = new Scanner(System.in);
             String line = scanner.nextLine();
