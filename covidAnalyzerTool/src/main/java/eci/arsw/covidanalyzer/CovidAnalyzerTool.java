@@ -20,9 +20,10 @@ public class CovidAnalyzerTool {
 
     private static ResultAnalyzer resultAnalyzer;
     private static TestReader testReader;
-    private int amountOfFilesTotal;
+    private static int amountOfFilesTotal;
     private static AtomicInteger amountOfFilesProcessed;
     private static ArrayList<AnalyzerThread> analyzerThreads;
+    private static boolean pausados=false;
 
     public CovidAnalyzerTool() {
         resultAnalyzer = new ResultAnalyzer();
@@ -33,7 +34,7 @@ public class CovidAnalyzerTool {
     public void processResultData() {
         amountOfFilesProcessed.set(0);
         List<File> resultFiles = getResultFileList();
-        amountOfFilesTotal = resultFiles.size();
+
         for (File resultFile : resultFiles) {
             List<Result> results = testReader.readResultsFromFile(resultFile);
             for (Result result : results) {
@@ -50,6 +51,7 @@ public class CovidAnalyzerTool {
         } catch (IOException e) {
             e.printStackTrace();
         }
+
         return csvFiles;
     }
 
@@ -64,6 +66,7 @@ public class CovidAnalyzerTool {
     public static void divisorThreads(int numHilos) throws InterruptedException {
         amountOfFilesProcessed.set(0);
         List<File> transactionFiles = getResultFileList();
+        amountOfFilesTotal = transactionFiles.size();
         analyzerThreads=new ArrayList<AnalyzerThread>();
         int threads=numHilos;
         int resi=transactionFiles.size()/threads;
@@ -90,6 +93,7 @@ public class CovidAnalyzerTool {
         }
     }
 
+
     /**
      * A main() so we can easily run these routing rules in our IDE
      */
@@ -101,13 +105,22 @@ public class CovidAnalyzerTool {
         while (true) {
             Scanner scanner = new Scanner(System.in);
             String line = scanner.nextLine();
-            if (line.contains("exit"))
-                break;
-            String message = "Processed %d out of %d files.\nFound %d positive people:\n%s";
-            Set<Result> positivePeople = covidAnalyzerTool.getPositivePeople();
-            String affectedPeople = positivePeople.stream().map(Result::toString).reduce("", (s1, s2) -> s1 + "\n" + s2);
-            message = String.format(message, covidAnalyzerTool.amountOfFilesProcessed.get(), covidAnalyzerTool.amountOfFilesTotal, positivePeople.size(), affectedPeople);
-            System.out.println(message);
+            if (line.contains("")){
+                for(AnalyzerThread hilo:analyzerThreads){
+                    hilo.pausa();
+                    pausados=!pausados;
+                }
+                if(pausados){
+                    System.out.println("________PAUSADOS________");
+                    String message = "Processed %d out of %d files.\nFound %d positive people:\n%s";
+                    Set<Result> positivePeople = covidAnalyzerTool.getPositivePeople();
+                    String affectedPeople = positivePeople.stream().map(Result::toString).reduce("", (s1, s2) -> s1 + "\n" + s2);
+                    message = String.format(message, covidAnalyzerTool.amountOfFilesProcessed.get(), covidAnalyzerTool.amountOfFilesTotal, positivePeople.size(), affectedPeople);
+                    System.out.println(message);
+                }else{System.out.println("________INICIADOSS________");}
+            }
+
+
         }
     }
 

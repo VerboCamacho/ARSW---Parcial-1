@@ -26,15 +26,32 @@ public class AnalyzerThread extends Thread{
     }
     @Override
     public void run(){
-        while(pausado.get()) {
             for (int archivo=minFile;archivo<=maxFile;archivo++) {
                 List<Result> results = testReader.readResultsFromFile(archivos.get(archivo));
+                //System.out.println(archivo);
                 for (Result result : results) {
+                    while(pausado.get()){
+                        synchronized (this){
+                            try {
+                                this.wait();
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    }
+
                     resultAnalyzer.addResult(result);
                 }
                 amountOfFilesProcessed.incrementAndGet();
             }
-        }
+
     }
 
+    public synchronized void pausa() throws InterruptedException {
+        if(pausado.get()) {
+            this.notify();
+        }
+        pausado.getAndSet(!pausado.get());
+
+    }
 }
